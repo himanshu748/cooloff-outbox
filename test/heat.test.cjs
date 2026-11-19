@@ -80,6 +80,17 @@ test('baseline needs 20 confident seconds, pauses over gaps and freezes median',
   b.reset();
   assert.equal(b.value, null);
 });
+test('baseline counts short confident intervals without overweighting high frame rates', () => {
+  const b = new Baseline();
+  for (let i = 0; i < 40; i++) {
+    for (let offset = 0; offset <= 500; offset += 100)
+      b.push({ pulse: sample(70), breathing: sample(15) }, i * 1000 + offset);
+    b.push({}, i * 1000 + 600);
+  }
+  assert.deepEqual(b.value, { pulse: 70, breathing: 15 });
+  assert.equal(b.elapsed, 20000);
+  assert.equal(b.pulse.length, 40);
+});
 test('hold threshold is strict; 30 continuous seconds resets on heat or missing confidence', () => {
   const h = new CoolingHold({ body: 'draft' }, 0);
   for (let t = 0; t <= 20000; t += 1000) h.tick(t, 20);

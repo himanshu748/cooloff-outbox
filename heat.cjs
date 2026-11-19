@@ -55,6 +55,7 @@ class Baseline {
     this.pulse = [];
     this.breathing = [];
     this.last = null;
+    this.sampled = null;
     this.elapsed = 0;
     this.value = null;
   }
@@ -64,16 +65,17 @@ class Baseline {
       this.last = null;
       return null;
     }
-    if (this.last !== null && now > this.last && now - this.last < 1000)
-      return null;
     if (this.last !== null && now > this.last && now - this.last <= 2500)
       this.elapsed += now - this.last;
     if (this.last !== null && now <= this.last) return null;
     this.last = now;
-    this.pulse.push(sample.pulse.value);
-    this.breathing.push(sample.breathing.value);
-    this.pulse = this.pulse.slice(-256);
-    this.breathing = this.breathing.slice(-256);
+    if (this.sampled === null || now - this.sampled >= 1000) {
+      this.sampled = now;
+      this.pulse.push(sample.pulse.value);
+      this.breathing.push(sample.breathing.value);
+      this.pulse = this.pulse.slice(-256);
+      this.breathing = this.breathing.slice(-256);
+    }
     if (this.elapsed >= 20000) {
       const median = (a) => {
         const v = [...a].sort((a, b) => a - b);
