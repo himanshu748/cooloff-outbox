@@ -3,6 +3,64 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
+function cardsContainer() {
+  let cards = new Map();
+  return {
+    get innerHTML() {
+      return [...cards.values()].map((card) => card.html).join('');
+    },
+    set innerHTML(html) {
+      cards = new Map(
+        [
+          ...html.matchAll(/<article data-hold="(\d+)"[\s\S]*?<\/article>/g),
+        ].map(([html, id]) => {
+          const children = new Map();
+          const card = {
+            html,
+            style: { setProperty() {} },
+            querySelector(selector) {
+              if (!children.has(selector)) {
+                const action = selector.match(/data-action="(.*?)"/);
+                const pattern = action
+                  ? new RegExp(
+                      '(<button[^>]*data-action="' +
+                        action[1] +
+                        '"[^>]*>)([\\s\\S]*?)(</button>)',
+                    )
+                  : new RegExp(
+                      '(<(?:span|p) class="' +
+                        selector.slice(1) +
+                        '">)([\\s\\S]*?)(</(?:span|p)>)',
+                    );
+                children.set(selector, {
+                  get textContent() {
+                    return card.html.match(pattern)?.[2] || '';
+                  },
+                  set textContent(text) {
+                    card.html = card.html.replace(
+                      pattern,
+                      (_, open, old, close) =>
+                        open +
+                        String(text)
+                          .replaceAll('&', '&amp;')
+                          .replaceAll('<', '&lt;') +
+                        close,
+                    );
+                  },
+                });
+              }
+              return children.get(selector);
+            },
+          };
+          return [id, card];
+        }),
+      );
+    },
+    querySelector(selector) {
+      return cards.get(selector.match(/data-hold="(\d+)"/)[1]) || null;
+    },
+  };
+}
 function app({
   failSend = false,
   failCopy = false,
@@ -14,6 +72,7 @@ function app({
     sent = [],
     copied = [],
     consent = [];
+  nodes.set('cards', cardsContainer());
   const $ = (id) => {
     if (!nodes.has(id))
       nodes.set(id, {
@@ -114,6 +173,29 @@ test('heated messages hold safely escaped text, unlock but never auto-send, then
   await a.click('deliver');
   assert.equal(a.sent.length, 1);
   assert.equal(a.$('cards').innerHTML, '');
+});
+test('ticks preserve card and button identity and preview scroll while updating controls', async () => {
+  const a = app();
+  await a.fill('YOU USELESS IDIOT!!! WHY??');
+  a.$('send').onclick();
+  const card = a.$('cards').querySelector('[data-hold="1"]');
+  const edit = card.querySelector('[data-action="edit"]');
+  const preview = card.querySelector('.message-preview');
+  preview.scrollTop = 52;
+  const override = card.querySelector('[data-action="override"]');
+  assert.equal(override.disabled, true);
+  a.tick(10000);
+  assert.equal(a.$('cards').querySelector('[data-hold="1"]'), card);
+  assert.equal(card.querySelector('[data-action="edit"]'), edit);
+  assert.equal(card.querySelector('.message-preview'), preview);
+  assert.equal(preview.scrollTop, 52);
+  assert.equal(override.disabled, false);
+  assert.equal(override.textContent, 'Send anyway');
+  assert.match(card.querySelector('.card-time').textContent, /10s/);
+  a.tick(30000);
+  assert.equal(card.querySelector('[data-action="edit"]'), edit);
+  assert.equal(card.querySelector('[data-action="deliver"]').disabled, false);
+  assert.match(card.querySelector('.card-state').textContent, /Timer complete/);
 });
 test('mail failure keeps the unlocked message; edit and delete are available while cooling', async () => {
   const a = app({ failSend: true });

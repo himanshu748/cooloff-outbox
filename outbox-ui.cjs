@@ -68,6 +68,7 @@ function mountOutbox({ $, show, stop }) {
     }
   }
   let counterWork = Promise.resolve();
+  let renderedHolds = '';
   function count(action, seconds) {
     counterWork = counterWork.then(async () => {
       try {
@@ -150,27 +151,51 @@ function mountOutbox({ $, show, stop }) {
         : `Calibrating · ${Math.floor(baseline.elapsed / 1000)} / 20 s of confident pulse + breathing`;
     $('outbox-count').textContent = String(holds.length).padStart(2, '0');
     $('cooling-empty').hidden = holds.length > 0;
-    $('cards').innerHTML = holds
-      .map((h) => {
-        const value = score(h.message),
-          previous = h.state;
-        h.tick(
-          now,
-          value,
-          camera && confident(live.pulse) && confident(live.breathing),
-        );
-        if (
-          previous === 'cooling' &&
-          h.state === 'unlocked' &&
-          $('save-counter').checked
+    const holdKey = holds.map((h) => h.id).join(',');
+    if (holdKey !== renderedHolds) {
+      renderedHolds = holdKey;
+      $('cards').innerHTML = holds
+        .map(
+          (h) =>
+            `<article data-hold="${h.id}" class="cooling-card"><div class="card-top"><span class="card-time"></span><span class="steam" aria-hidden="true">∿ ∿ ∿</span></div><h3>${safe(h.message.subject || '(No subject)')}</h3><small>To ${safe(h.message.to || '(not set)')}</small><p class="message-preview">${safe(h.message.body)}</p><p class="card-state"></p><div class="card-actions"><button data-id="${h.id}" data-action="deliver">${h.copy ? 'Copy message' : 'Open mail app'} ↗</button><button data-id="${h.id}" data-action="copy">Copy</button><button data-id="${h.id}" data-action="override">Send anyway</button><button data-id="${h.id}" data-action="edit">Edit</button><button data-id="${h.id}" data-action="delete">Delete</button></div></article>`,
         )
-          void count('add', Math.min(180, (now - h.started) / 1000));
-        const elapsed = Math.max(0, Math.floor((now - h.started) / 1000));
-        const sustain =
-          h.belowSince === null ? 0 : Math.floor((now - h.belowSince) / 1000);
-        return `<article class="cooling-card ${h.state}" style="--steam:${Math.max(0.12, value / 100)}"><div class="card-top"><span>${h.state === 'unlocked' ? '✓ Ready when you are' : '◷ Cooling'} · ${elapsed}s</span><span class="steam" aria-hidden="true">∿ ∿ ∿</span></div><h3>${safe(h.message.subject || '(No subject)')}</h3><small>To ${safe(h.message.to || '(not set)')}</small><p class="message-preview">${safe(h.message.body)}</p><p class="card-state">${h.state === 'unlocked' ? safe(h.reason) + ' · not sent' : h.timerOnly ? 'Timer-only pause · 30 seconds' : `${label(value)} · ${value}/100 · below 40 for ${sustain}/30s · max 3 min`}</p><div class="card-actions"><button data-id="${h.id}" data-action="deliver" ${h.state !== 'unlocked' ? 'disabled' : ''}>${h.copy ? 'Copy message' : 'Open mail app'} ↗</button><button data-id="${h.id}" data-action="copy" ${h.state !== 'unlocked' ? 'disabled' : ''}>Copy</button><button data-id="${h.id}" data-action="override" ${!h.canOverride(now) ? 'disabled' : ''}>Send anyway${elapsed < 10 ? ` (${10 - elapsed}s)` : ''}</button><button data-id="${h.id}" data-action="edit">Edit</button><button data-id="${h.id}" data-action="delete">Delete</button></div></article>`;
-      })
-      .join('');
+        .join('');
+    }
+    for (const h of holds) {
+      const value = score(h.message),
+        previous = h.state;
+      h.tick(
+        now,
+        value,
+        camera && confident(live.pulse) && confident(live.breathing),
+      );
+      if (
+        previous === 'cooling' &&
+        h.state === 'unlocked' &&
+        $('save-counter').checked
+      )
+        void count('add', Math.min(180, (now - h.started) / 1000));
+      const elapsed = Math.max(0, Math.floor((now - h.started) / 1000));
+      const sustain =
+        h.belowSince === null ? 0 : Math.floor((now - h.belowSince) / 1000);
+      const card = $('cards').querySelector(`[data-hold="${h.id}"]`);
+      card.className = `cooling-card ${h.state}`;
+      card.style.setProperty('--steam', Math.max(0.12, value / 100));
+      card.querySelector('.card-time').textContent =
+        `${h.state === 'unlocked' ? '✓ Ready when you are' : '◷ Cooling'} · ${elapsed}s`;
+      card.querySelector('.card-state').textContent =
+        h.state === 'unlocked'
+          ? h.reason + ' · not sent'
+          : h.timerOnly
+            ? 'Timer-only pause · 30 seconds'
+            : `${label(value)} · ${value}/100 · below 40 for ${sustain}/30s · max 3 min`;
+      for (const action of ['deliver', 'copy'])
+        card.querySelector(`[data-action="${action}"]`).disabled =
+          h.state !== 'unlocked';
+      const override = card.querySelector('[data-action="override"]');
+      override.disabled = !h.canOverride(now);
+      override.textContent = `Send anyway${elapsed < 10 ? ` (${10 - elapsed}s)` : ''}`;
+    }
   }
   $('cards').onclick = async (event) => {
     const button = event.target.closest('button[data-id]');
