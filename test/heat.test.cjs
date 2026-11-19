@@ -245,3 +245,95 @@ test('timer-only holds unlock at 30s, never before, regardless of estimates', ()
   assert.equal(h.tick(29999, 0), 'cooling');
   assert.equal(h.tick(30000, 100, false), 'unlocked');
 });
+test('hold history samples once per elapsed second, gates each vital, caps at 200 and freezes', () => {
+  const h = new CoolingHold({}, 0);
+  h.capture(-1, 50);
+  h.capture(0, NaN);
+  h.capture(NaN, 50);
+  assert.equal(h.samples.length, 0);
+  h.capture(0, 62, { pulse: sample(96), breathing: sample(21) });
+  h.capture(999, 30);
+  h.capture(1001, 40, {
+    pulse: { value: 90, confidence: 0.49 },
+    breathing: sample(18),
+  });
+  h.capture(1999, 99);
+  h.capture(2000, 35, { pulse: sample(81), breathing: sample(Infinity) });
+  assert.equal(h.samples.length, 3);
+  assert.equal(h.samples[1].pulse, null);
+  assert.equal(h.samples[1].breathing, 18);
+  assert.equal(h.samples[2].breathing, null);
+  for (let t = 3000; t <= 250000; t += 1000) h.capture(t, 45);
+  assert.equal(h.samples.length, 200);
+  assert.equal(h.samples[0].at, 0);
+  assert.equal(h.samples.at(-1).at, 250000);
+  const points = h
+    .heatTrace()
+    .split(' ')
+    .map((point) => point.split(',').map(Number));
+  assert.equal(points[0][0], 4);
+  assert.equal(points.at(-1)[0], 296);
+  assert.ok(points.every(([x, y]) => x >= 4 && x <= 296 && y >= 4 && y <= 60));
+  h.tick(250000, 45);
+  const history = structuredClone(h.samples),
+    receipt = h.receipt();
+  h.tick(260000, 0);
+  h.capture(260000, 0);
+  assert.deepEqual(h.samples, history);
+  assert.equal(h.receipt(), receipt);
+});
+test('sustained cooling receipt uses first and last confident vitals and exact frozen duration', () => {
+  const h = new CoolingHold({}, 0);
+  h.tick(0, 62, true, { pulse: sample(96), breathing: sample(21) });
+  assert.equal(h.receipt(), '');
+  for (let t = 1000; t <= 71000; t += 1000) h.tick(t, 50);
+  for (let t = 72000; t <= 102000; t += 1000)
+    h.tick(t, 18, true, { pulse: sample(81), breathing: sample(15) });
+  assert.equal(
+    h.receipt(),
+    'Cooled from 62 to 18 in 1 m 42 s · pulse 96 → 81 bpm · breathing 21 → 15/min',
+  );
+  assert.equal(h.samples.length, 103);
+  h.tick(130000, 100, true, { pulse: sample(130) });
+  assert.equal(h.ended, 102000);
+});
+test('timer, missing physiology, empty history and maximum holds never imply measured cooling', () => {
+  const timer = new CoolingHold({}, 0, { timerOnly: true });
+  timer.tick(0, 45, true, { pulse: sample(96), breathing: sample(21) });
+  timer.tick(30000, 45, true, { pulse: sample(81), breathing: sample(15) });
+  assert.equal(timer.receipt(), 'Timer-only pause · text heat 45 → 45 in 30 s');
+  assert.equal(
+    timer.samples.every((s) => s.pulse === null && s.breathing === null),
+    true,
+  );
+  const maximum = new CoolingHold({}, 0);
+  maximum.tick(0, 62);
+  maximum.tick(180000, 70);
+  assert.equal(
+    maximum.receipt(),
+    'Maximum hold reached in 3 m 0 s · heat 62 → 70',
+  );
+  const empty = new CoolingHold({}, 0);
+  empty.tick(180000, NaN);
+  assert.match(empty.receipt(), /heat unavailable/);
+  assert.doesNotMatch(empty.receipt(), /pulse|breathing|NaN/);
+  const single = new CoolingHold({}, 0);
+  single.tick(0, 62, true, { pulse: sample(96) });
+  single.tick(180000, 70);
+  assert.match(single.receipt(), /pulse 96 bpm \(one confident sample\)/);
+});
+test('override captures final heat, requires approval, and marks the receipt as before cooling', () => {
+  const h = new CoolingHold({}, 0);
+  h.tick(0, 62, true, { pulse: sample(96) });
+  assert.equal(h.override(9999, true, 50), false);
+  assert.equal(h.override(10000, false, 50), false);
+  assert.equal(h.receipt(), '');
+  assert.equal(h.override(10000, true, 50, { pulse: sample(90) }), true);
+  assert.equal(
+    h.receipt(),
+    'Released before cooling (Send anyway) · heat 62 → 50 in 10 s · pulse 96 → 90 bpm',
+  );
+  assert.equal(h.samples.length, 2);
+  h.capture(20000, 0);
+  assert.equal(h.samples.length, 2);
+});

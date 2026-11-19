@@ -68,7 +68,8 @@ SDK telemetry defaults **off**; consent separately offers diagnostic telemetry.
 The app makes no other web requests. Its renderer blocks network connections.
 
 Drafts, keys, baselines and vitals live **in memory only**. No recording, draft
-autosave, analytics or vital history. Stop releases camera resources without
+autosave or analytics. Each hold keeps up to 200 heat/rate samples in memory for
+its receipt; deleting the card or quitting removes that history. Stop releases camera resources without
 deleting drafts; native readiness has no abort API, so Stop honestly waits for
 its teardown before showing CAMERA OFF. Clear/delete removes a draft in the
 app; quitting deletes all app-held drafts/measurements. Optional **Save totals**

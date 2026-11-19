@@ -33,6 +33,10 @@ function cardsContainer() {
                         '">)([\\s\\S]*?)(</(?:span|p)>)',
                     );
                 children.set(selector, {
+                  attributes: {},
+                  setAttribute(name, value) {
+                    this.attributes[name] = value;
+                  },
                   get textContent() {
                     return card.html.match(pattern)?.[2] || '';
                   },
@@ -304,11 +308,47 @@ test('Send anyway confirms and hands off after ten seconds; Delete works during 
   a.tick(10000);
   await a.click('override');
   assert.equal(a.sent.length, 1);
+  assert.match(
+    a.$('cards').innerHTML,
+    /Released before cooling \(Send anyway\)/,
+  );
+  assert.match(
+    a.$('cards').innerHTML,
+    /Mail draft opened; not sent automatically/,
+  );
+  await a.click('delete');
   a.$('body').value = 'YOU USELESS IDIOT!!! WHY??';
   a.$('subject').value = 'FOLLOW UP';
   a.$('send').onclick();
   await a.click('delete', 2);
   assert.equal(a.$('cards').innerHTML, '');
+});
+test('receipt trace and summary update on the same card and stop after timer unlock', async () => {
+  const a = app();
+  a.$('try-example').onclick();
+  a.$('send').onclick();
+  const card = a.$('cards').querySelector('[data-hold="1"]');
+  const trace = card.querySelector('.receipt-trace');
+  const initial = trace.attributes.points;
+  assert.equal(card.querySelector('.receipt').hidden, true);
+  for (let t = 1000; t <= 30000; t += 1000) a.tick(t);
+  assert.equal(a.$('cards').querySelector('[data-hold="1"]'), card);
+  assert.equal(card.querySelector('.receipt-trace'), trace);
+  assert.notEqual(trace.attributes.points, initial);
+  assert.equal(trace.attributes.points.split(' ').length, 31);
+  assert.equal(card.querySelector('.receipt').hidden, false);
+  assert.match(
+    card.querySelector('.receipt-summary').textContent,
+    /Timer-only pause · text heat 45 → 45 in 30 s/,
+  );
+  assert.doesNotMatch(
+    card.querySelector('.receipt-summary').textContent,
+    /pulse|breathing/,
+  );
+  const frozen = trace.attributes.points;
+  a.tick(60000);
+  assert.equal(trace.attributes.points, frozen);
+  assert.equal(a.sent.length, 0);
 });
 test('SDK percentages, expression enum and 20-second personal baseline reach the composer', () => {
   const a = app();

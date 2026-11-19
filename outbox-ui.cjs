@@ -2,6 +2,7 @@ const {
   Baseline,
   CoolingHold,
   heatBreakdown,
+  textHeat,
   rewriteTip,
   confident,
   THRESHOLD,
@@ -28,6 +29,10 @@ function mountOutbox({ $, show, stop }) {
       text: message.subject + '\n' + message.body,
     });
   const score = (message) => breakdown(message).score;
+  const holdScore = (hold) =>
+    hold.timerOnly
+      ? textHeat(hold.message.subject + '\n' + hold.message.body)
+      : score(hold.message);
   const mayReplace = () =>
     !Object.values(fields()).some((value) => value.trim()) ||
     window.confirm('Replace the current composer draft?');
@@ -181,6 +186,7 @@ function mountOutbox({ $, show, stop }) {
     });
     hold.id = nextId++;
     hold.heldHeat = analysis;
+    hold.capture(hold.started, holdScore(hold), camera ? live : {});
     hold.copy = copy;
     holds.push(hold);
     $('body').value = '';
@@ -228,17 +234,18 @@ function mountOutbox({ $, show, stop }) {
       $('cards').innerHTML = holds
         .map(
           (h) =>
-            `<article data-hold="${h.id}" class="cooling-card"><div class="card-top"><span class="card-time"></span><span class="steam" aria-hidden="true">∿ ∿ ∿</span></div><h3>${safe(h.message.subject || '(No subject)')}</h3><small>To ${safe(h.message.to || '(not set)')}</small><p class="message-preview">${safe(h.message.body)}</p><p class="held-because">${safe(heldBecause(h.heldHeat))}</p><p class="card-state"></p><div class="card-actions"><button data-id="${h.id}" data-action="deliver">${h.copy ? 'Copy message' : 'Open mail app'} ↗</button><button data-id="${h.id}" data-action="copy">Copy</button><button data-id="${h.id}" data-action="override">Send anyway</button><button data-id="${h.id}" data-action="edit">Edit</button><button data-id="${h.id}" data-action="delete">Delete</button></div></article>`,
+            `<article data-hold="${h.id}" class="cooling-card"><div class="card-top"><span class="card-time"></span><span class="steam" aria-hidden="true">∿ ∿ ∿</span></div><h3>${safe(h.message.subject || '(No subject)')}</h3><small>To ${safe(h.message.to || '(not set)')}</small><p class="message-preview">${safe(h.message.body)}</p><p class="held-because">${safe(heldBecause(h.heldHeat))}</p><p class="card-state"></p><section class="receipt" hidden><span class="receipt-key">Heat over the hold · dashed line: 40 · memory only</span><svg viewBox="0 0 300 64" role="img" aria-label="Heat history with threshold at 40"><line x1="4" y1="37.6" x2="296" y2="37.6" class="receipt-threshold"/><polyline class="receipt-trace" points=""/></svg><p class="receipt-summary"></p></section><div class="card-actions"><button data-id="${h.id}" data-action="deliver">${h.copy ? 'Copy message' : 'Open mail app'} ↗</button><button data-id="${h.id}" data-action="copy">Copy</button><button data-id="${h.id}" data-action="override">Send anyway</button><button data-id="${h.id}" data-action="edit">Edit</button><button data-id="${h.id}" data-action="delete">Delete</button></div></article>`,
         )
         .join('');
     }
     for (const h of holds) {
-      const value = score(h.message),
+      const value = holdScore(h),
         previous = h.state;
       h.tick(
         now,
         value,
         camera && confident(live.pulse) && confident(live.breathing),
+        camera ? live : {},
       );
       if (
         previous === 'cooling' &&
@@ -250,6 +257,12 @@ function mountOutbox({ $, show, stop }) {
       const sustain =
         h.belowSince === null ? 0 : Math.floor((now - h.belowSince) / 1000);
       const card = $('cards').querySelector(`[data-hold="${h.id}"]`);
+      card.querySelector('.receipt').hidden = h.state !== 'unlocked';
+      card
+        .querySelector('.receipt-trace')
+        .setAttribute('points', h.heatTrace());
+      card.querySelector('.receipt-summary').textContent =
+        h.receipt() + (h.handoff ? ` · ${h.handoff}` : '');
       card.className = `cooling-card ${h.state}`;
       card.style.setProperty('--steam', Math.max(0.12, value / 100));
       card.querySelector('.card-time').textContent =
@@ -290,9 +303,13 @@ function mountOutbox({ $, show, stop }) {
         window.confirm(
           'Open this message before it has cooled? Nothing sends until you confirm in your mail app, or paste the copied text.',
         ),
+        holdScore(h),
+        camera ? live : {},
       );
       if (approved && (await deliver(h.message, h.copy)))
-        holds = holds.filter((item) => item !== h);
+        h.handoff = h.copy
+          ? 'Copied by your choice'
+          : 'Mail draft opened; not sent automatically';
     }
     if (
       (action === 'deliver' || action === 'copy') &&

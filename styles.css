@@ -324,6 +324,41 @@ meter {
   font-size: 12px;
   line-height: 1.6;
 }
+.receipt {
+  margin: 16px 0;
+  padding-top: 12px;
+  border-top: 1px solid #bbc7b4;
+}
+.receipt-key {
+  display: block;
+  font-size: 11px;
+  color: #596951;
+}
+.receipt svg {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: 70px;
+  margin: 8px 0;
+  overflow: visible;
+}
+.receipt-threshold {
+  stroke: #8c765b;
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+}
+.receipt-trace {
+  fill: none;
+  stroke: #356451;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.receipt-summary {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
 .compose-actions {
   display: flex;
   gap: 10px;

@@ -157,10 +157,38 @@ class CoolingHold {
     this.state = 'cooling';
     this.reason = '';
     this.timerOnly = timerOnly;
+    this.samples = [];
+    this.ended = null;
   }
-  tick(now, heat, reliable = true) {
+  capture(now, heat, vitals = {}) {
+    const last = this.samples.at(-1);
+    if (
+      this.state !== 'cooling' ||
+      !Number.isFinite(now) ||
+      now < this.started ||
+      !Number.isFinite(heat) ||
+      (last &&
+        Math.floor((now - this.started) / 1000) <=
+          Math.floor((last.at - this.started) / 1000))
+    )
+      return;
+    this.samples.push({
+      at: now,
+      heat: Math.round(clamp(heat, 100)),
+      pulse:
+        !this.timerOnly && confident(vitals.pulse) ? vitals.pulse.value : null,
+      breathing:
+        !this.timerOnly && confident(vitals.breathing)
+          ? vitals.breathing.value
+          : null,
+    });
+    if (this.samples.length > 200)
+      this.samples.splice(1, this.samples.length - 200);
+  }
+  tick(now, heat, reliable = true, vitals = {}) {
     if (this.state !== 'cooling' || !Number.isFinite(now) || now < this.last)
       return this.state;
+    this.capture(now, heat, vitals);
     const gap = now - this.last;
     this.last = now;
     if (now - this.started >= 180000) {
@@ -178,16 +206,61 @@ class CoolingHold {
         this.reason = 'Below threshold for 30 seconds';
       }
     } else this.belowSince = null;
+    if (this.state === 'unlocked') this.ended = now;
     return this.state;
   }
   canOverride(now) {
     return this.state === 'cooling' && now - this.started >= 10000;
   }
-  override(now, confirmed) {
+  override(now, confirmed, heat, vitals) {
     if (!confirmed || !this.canOverride(now)) return false;
+    this.capture(now, heat, vitals);
     this.state = 'unlocked';
     this.reason = 'Your choice: send anyway';
+    this.ended = now;
     return true;
+  }
+  receipt() {
+    if (this.state === 'cooling') return '';
+    const seconds = Math.max(0, Math.floor((this.ended - this.started) / 1000));
+    const elapsed =
+      seconds >= 60
+        ? `${Math.floor(seconds / 60)} m ${seconds % 60} s`
+        : `${seconds} s`;
+    const first = this.samples[0],
+      last = this.samples.at(-1);
+    const summary = first ? `${first.heat} → ${last.heat}` : null;
+    let sentence;
+    if (this.reason === 'Your choice: send anyway')
+      sentence = `Released before cooling (Send anyway) · ${this.timerOnly ? 'text heat' : 'heat'} ${summary ?? 'unavailable'} in ${elapsed}`;
+    else if (this.timerOnly)
+      sentence = `Timer-only pause · text heat ${summary ?? 'unavailable'} in ${elapsed}`;
+    else if (this.reason === 'Below threshold for 30 seconds' && first)
+      sentence = `Cooled from ${first.heat} to ${last.heat} in ${elapsed}`;
+    else
+      sentence = `Maximum hold reached in ${elapsed} · heat ${summary ?? 'unavailable'}`;
+    if (!this.timerOnly)
+      for (const [name, unit] of [
+        ['pulse', 'bpm'],
+        ['breathing', '/min'],
+      ]) {
+        const readings = this.samples.filter((sample) => sample[name] !== null);
+        if (readings.length)
+          sentence += ` · ${name} ${Number(readings[0][name].toFixed(1))}${readings.length > 1 ? ' → ' + Number(readings.at(-1)[name].toFixed(1)) : ''}${unit === 'bpm' ? ' ' : ''}${unit}${readings.length === 1 ? ' (one confident sample)' : ''}`;
+      }
+    return sentence;
+  }
+  heatTrace() {
+    const duration = Math.max(
+      1000,
+      (this.ended ?? this.samples.at(-1)?.at ?? this.last) - this.started,
+    );
+    return this.samples
+      .map(
+        (sample) =>
+          `${(4 + (292 * (sample.at - this.started)) / duration).toFixed(1)},${(60 - sample.heat * 0.56).toFixed(1)}`,
+      )
+      .join(' ');
   }
 }
 module.exports = {
