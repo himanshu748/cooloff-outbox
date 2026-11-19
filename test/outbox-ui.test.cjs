@@ -350,6 +350,28 @@ test('receipt trace and summary update on the same card and stop after timer unl
   assert.equal(trace.attributes.points, frozen);
   assert.equal(a.sent.length, 0);
 });
+test('unlocked and released-early headers freeze at the receipt duration', async () => {
+  for (const [end, override, duration] of [
+    [30000, false, '30 s'],
+    [10000, true, '10 s'],
+    [180000, false, '3 m 0 s'],
+  ]) {
+    const a = app();
+    a.$('try-example').onclick();
+    a.$('send').onclick();
+    const card = a.$('cards').querySelector('[data-hold="1"]');
+    a.tick(end);
+    if (override) await a.click('override');
+    const expected = `✓ ${override ? 'Released early' : 'Ready when you are'} · held ${duration}`;
+    assert.equal(card.querySelector('.card-time').textContent, expected);
+    const receipt = card.querySelector('.receipt-summary').textContent;
+    assert.ok(receipt.includes(`in ${duration}`));
+    a.tick(end + 65000);
+    assert.equal(a.$('cards').querySelector('[data-hold="1"]'), card);
+    assert.equal(card.querySelector('.card-time').textContent, expected);
+    assert.equal(card.querySelector('.receipt-summary').textContent, receipt);
+  }
+});
 test('confident non-heat expressions appear in Why but not frozen hold reasons', () => {
   for (const [type, name] of [
     [8, 'surprise'],

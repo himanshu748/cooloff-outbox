@@ -253,7 +253,14 @@ function mountOutbox({ $, show, stop }) {
         $('save-counter').checked
       )
         void count('add', Math.min(180, (now - h.started) / 1000));
-      const elapsed = Math.max(0, Math.floor((now - h.started) / 1000));
+      const elapsed = Math.max(
+        0,
+        Math.floor(((h.ended ?? now) - h.started) / 1000),
+      );
+      const duration =
+        elapsed >= 60
+          ? `${Math.floor(elapsed / 60)} m ${elapsed % 60} s`
+          : `${elapsed} s`;
       const sustain =
         h.belowSince === null ? 0 : Math.floor((now - h.belowSince) / 1000);
       const card = $('cards').querySelector(`[data-hold="${h.id}"]`);
@@ -266,7 +273,9 @@ function mountOutbox({ $, show, stop }) {
       card.className = `cooling-card ${h.state}`;
       card.style.setProperty('--steam', Math.max(0.12, value / 100));
       card.querySelector('.card-time').textContent =
-        `${h.state === 'unlocked' ? '✓ Ready when you are' : '◷ Cooling'} · ${elapsed}s`;
+        h.state === 'unlocked'
+          ? `✓ ${h.reason === 'Your choice: send anyway' ? 'Released early' : 'Ready when you are'} · held ${duration}`
+          : `◷ Cooling · ${elapsed}s`;
       card.querySelector('.card-state').textContent =
         h.state === 'unlocked'
           ? h.reason + ' · not sent'
