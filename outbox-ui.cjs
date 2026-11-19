@@ -181,7 +181,7 @@ function mountOutbox({ $, show, stop }) {
     if (action === 'delete') holds = holds.filter((item) => item !== h);
     if (action === 'edit') {
       if (
-        fields().body.trim() &&
+        Object.values(fields()).some((value) => value.trim()) &&
         !window.confirm('Replace the current composer draft?')
       )
         return;

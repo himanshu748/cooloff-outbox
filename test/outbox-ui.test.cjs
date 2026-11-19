@@ -3,7 +3,11 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-function app({ failSend = false, failCopy = false } = {}) {
+function app({
+  failSend = false,
+  failCopy = false,
+  confirm = () => true,
+} = {}) {
   let now = 0,
     interval;
   const nodes = new Map(),
@@ -34,7 +38,7 @@ function app({ failSend = false, failCopy = false } = {}) {
       interval = callback;
     },
     window: {
-      confirm: () => true,
+      confirm,
       cooloff: {
         copy: async (text) => {
           if (failCopy) throw Error('Clipboard unavailable');
@@ -126,6 +130,33 @@ test('mail failure keeps the unlocked message; edit and delete are available whi
   await a.click('copy', 2);
   assert.equal(a.copied.length, 1);
   assert.equal(a.$('cards').innerHTML, '');
+});
+test('editing confirms replacement of recipient-only or subject-only drafts, but not an empty composer', async () => {
+  for (const field of ['to', 'subject', 'body', null]) {
+    let requests = 0,
+      approved = false;
+    const a = app({
+      confirm: () => {
+        requests++;
+        return approved;
+      },
+    });
+    await a.fill('YOU USELESS IDIOT!!! WHY??');
+    a.$('send').onclick();
+    for (const id of ['to', 'subject', 'body']) a.$(id).value = '';
+    if (field) a.$(field).value = 'Unsaved work';
+    await a.click('edit');
+    assert.equal(requests, field ? 1 : 0);
+    if (field) {
+      assert.equal(a.$(field).value, 'Unsaved work');
+      assert.match(a.$('cards').innerHTML, /Cooling/);
+      approved = true;
+      await a.click('edit');
+    }
+    assert.equal(a.$('to').value, 'test@example.com');
+    assert.match(a.$('body').value, /USELESS/);
+    assert.equal(a.$('cards').innerHTML, '');
+  }
 });
 test('clipboard failure retains an unlocked draft and offers an actionable error', async () => {
   const a = app({ failCopy: true });
