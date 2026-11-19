@@ -43,7 +43,7 @@ function mountOutbox({ $, show, stop }) {
   async function deliver(message, copy = false) {
     try {
       if (copy) {
-        await navigator.clipboard.writeText(
+        await window.cooloff.copy(
           `To: ${message.to}\nSubject: ${message.subject}\n\n${message.body}`,
         );
         notice('Copied. You decide where to paste it.');
@@ -55,7 +55,15 @@ function mountOutbox({ $, show, stop }) {
       }
       return true;
     } catch (e) {
-      notice('Could not open/copy: ' + e.message + ' — try Copy instead.');
+      notice(
+        copy
+          ? 'Could not copy: ' +
+              e.message +
+              ' — your message remains available.'
+          : 'Could not open your mail app: ' +
+              e.message +
+              ' — try Copy instead.',
+      );
       return false;
     }
   }

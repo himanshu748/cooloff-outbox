@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-function app({ failSend = false } = {}) {
+function app({ failSend = false, failCopy = false } = {}) {
   let now = 0,
     interval;
   const nodes = new Map(),
@@ -33,10 +33,13 @@ function app({ failSend = false } = {}) {
     setInterval: (callback) => {
       interval = callback;
     },
-    navigator: { clipboard: { writeText: async (text) => copied.push(text) } },
     window: {
       confirm: () => true,
       cooloff: {
+        copy: async (text) => {
+          if (failCopy) throw Error('Clipboard unavailable');
+          copied.push(text);
+        },
         send: async (fields) => {
           if (failSend) throw Error('No mail handler');
           sent.push(fields);
@@ -123,6 +126,20 @@ test('mail failure keeps the unlocked message; edit and delete are available whi
   await a.click('copy', 2);
   assert.equal(a.copied.length, 1);
   assert.equal(a.$('cards').innerHTML, '');
+});
+test('clipboard failure retains an unlocked draft and offers an actionable error', async () => {
+  const a = app({ failCopy: true });
+  await a.fill('YOU USELESS IDIOT!!! WHY??');
+  a.$('copy').onclick();
+  a.tick(30000);
+  await a.click('copy');
+  assert.equal(a.copied.length, 0);
+  assert.match(a.$('cards').innerHTML, /Ready when/);
+  assert.match(
+    a.$('feedback').textContent,
+    /Could not copy: Clipboard unavailable/,
+  );
+  assert.doesNotMatch(a.$('feedback').textContent, /try Copy/);
 });
 test('Send anyway confirms and hands off after ten seconds; Delete works during cooling', async () => {
   const a = app();

@@ -1,6 +1,7 @@
 const path = require('node:path');
 const fs = require('node:fs/promises');
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, clipboard } = require('electron');
+const { messageUrl, copyPayload } = require('./handoff.cjs');
 const { bindSmartSpectraIpc } = require('@smartspectra/node-sdk/main');
 const native = require('@smartspectra/node-sdk');
 const { createReadiness } = require('./readiness.cjs');
@@ -93,27 +94,13 @@ app.whenReady().then(() => {
     trusted(event) ? process.env.SMARTSPECTRA_API_KEY || '' : '',
   );
   ipcMain.handle('cooloff:send', async (event, fields) => {
-    if (
-      !trusted(event) ||
-      !fields ||
-      !['to', 'subject', 'body'].every((k) => typeof fields[k] === 'string') ||
-      fields.to.length > 254 ||
-      fields.subject.length > 200 ||
-      fields.body.length > 8000 ||
-      !/^[^\s@<>:,;?&#]+@[^\s@<>:,;?&#]+\.[^\s@<>:,;?&#]+$/.test(fields.to) ||
-      /[\r\n]/.test(fields.subject)
-    )
-      throw new Error(
-        'Use one email address and a subject without line breaks.',
-      );
-    await shell.openExternal(
-      'mailto:' +
-        encodeURIComponent(fields.to) +
-        '?subject=' +
-        encodeURIComponent(fields.subject) +
-        '&body=' +
-        encodeURIComponent(fields.body),
-    );
+    if (!trusted(event)) throw Error('Untrusted sender');
+    await shell.openExternal(messageUrl(fields));
+    return true;
+  });
+  ipcMain.handle('cooloff:copy', (event, text) => {
+    if (!trusted(event)) throw Error('Untrusted sender');
+    clipboard.writeText(copyPayload(text));
     return true;
   });
   ipcMain.handle('cooloff:counter', async (event, action, heldSeconds = 0) => {
