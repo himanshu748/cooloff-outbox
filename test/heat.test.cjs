@@ -2,12 +2,129 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   heatScore,
+  heatBreakdown,
   textHeat,
   rewriteTip,
   Baseline,
   CoolingHold,
 } = require('../heat.cjs');
 const sample = (value) => ({ value, confidence: 0.9 });
+test('breakdown reports scored raw evidence and dominant confident expression', () => {
+  const result = heatBreakdown({
+    baseline: { pulse: 82, breathing: 18 },
+    pulse: sample(96),
+    breathing: sample(22),
+    expressions: [
+      { name: 'angry', value: 0.62, confidence: 0.62 },
+      { name: 'contempt', value: 0.55, confidence: 0.55 },
+      { name: 'disgust', value: 0.99, confidence: 0.2 },
+    ],
+    text: 'YOU USELESS IDIOT!!! WHY??',
+  });
+  assert.equal(result.score, 83);
+  assert.equal(result.parts.pulse.points, 14);
+  assert.deepEqual(result.parts.pulse.evidence, {
+    status: 'available',
+    value: 96,
+    baseline: 82,
+    delta: 14,
+    confidence: 0.9,
+  });
+  assert.equal(result.parts.breathing.evidence.delta, 4);
+  assert.equal(result.parts.expression.evidence.label, 'angry');
+  assert.equal(result.parts.expression.evidence.confidence, 0.62);
+  assert.equal(result.parts.expression.points, 15.5);
+  assert.equal(result.parts.text.evidence.capsRatio, 1);
+  assert.equal(result.parts.text.evidence.repeatedPunctuation, 2);
+  assert.deepEqual(result.parts.text.evidence.hostileWords, [
+    'useless',
+    'idiot',
+  ]);
+});
+test('missing, low-confidence and camera-off evidence is unavailable, not a measured zero', () => {
+  for (const input of [
+    {},
+    {
+      pulse: { value: 96, confidence: 0.49 },
+      breathing: sample(NaN),
+      expressions: [{ name: 'angry', value: 1, confidence: 0.2 }],
+    },
+  ]) {
+    const result = heatBreakdown(input);
+    for (const name of ['pulse', 'breathing', 'expression']) {
+      assert.equal(result.parts[name].points, null);
+      assert.equal(result.parts[name].evidence.status, 'no confident data');
+    }
+    assert.equal(result.score, 0);
+  }
+  assert.equal(
+    heatBreakdown({ pulse: sample(96) }).parts.pulse.evidence.status,
+    'no baseline',
+  );
+  const input = {
+    baseline: { pulse: 70, breathing: 15 },
+    pulse: sample(100),
+    breathing: sample(27),
+    expressions: [{ name: 'angry', ...sample(1) }],
+    text: 'YOU USELESS IDIOT!!! WHY??',
+  };
+  for (const mode of [{ camera: false }]) {
+    const result = heatBreakdown({ ...input, ...mode });
+    assert.equal(result.score, 45);
+    for (const name of ['pulse', 'breathing', 'expression']) {
+      assert.equal(result.parts[name].points, null);
+      assert.equal(result.parts[name].evidence.status, 'camera off');
+    }
+  }
+  const calm = heatBreakdown({
+    baseline: input.baseline,
+    pulse: sample(70),
+    breathing: sample(15),
+  });
+  assert.equal(calm.parts.pulse.points, 0);
+  assert.equal(calm.parts.pulse.evidence.status, 'available');
+});
+test('breakdown preserves the original numeric scoring across confidence, baseline and text boundaries', () => {
+  const original = ({
+    baseline,
+    pulse,
+    breathing,
+    expressions = [],
+    text = '',
+  }) => {
+    const clamp = (n) => Math.max(0, Math.min(1, n));
+    const ok = (s) => s && Number.isFinite(s.value) && s.confidence >= 0.5;
+    let score = textHeat(text);
+    if (baseline && baseline.pulse > 0 && ok(pulse))
+      score += 30 * clamp((pulse.value - baseline.pulse) / 30);
+    if (baseline && baseline.breathing > 0 && ok(breathing))
+      score += 25 * clamp((breathing.value - baseline.breathing) / 12);
+    score +=
+      25 *
+      Math.max(
+        0,
+        ...expressions
+          .filter(
+            (s) => /^(angry|anger|contempt|disgust)$/i.test(s.name) && ok(s),
+          )
+          .map((s) => clamp(s.value)),
+      );
+    return Math.round(Math.max(0, Math.min(100, score)));
+  };
+  for (const confidence of [0, 0.49, 0.5, 0.9])
+    for (const value of [NaN, 30, 70, 84.5, 100, 900])
+      for (const text of ['', 'OK', 'Why??', 'YOU USELESS IDIOT!!! WHY??']) {
+        const input = {
+          baseline: { pulse: 70, breathing: 15 },
+          pulse: { value, confidence },
+          breathing: { value: value / 4, confidence },
+          expressions: [{ name: 'angry', value: 0.62, confidence }],
+          text,
+        };
+        assert.equal(heatBreakdown(input).score, original(input));
+        assert.equal(heatScore(input), original(input));
+      }
+});
 test('heat is bounded, personal and ignores uncertain / nonfinite data', () => {
   assert.equal(heatScore(), 0);
   const baseline = { pulse: 70, breathing: 15 };

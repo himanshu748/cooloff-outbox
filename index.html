@@ -146,7 +146,25 @@
               ><span id="heat-number">0 / 100</span>
             </div>
             <p id="baseline" class="small">Timer-only · text cues, no camera</p>
+            <section class="heat-why" aria-label="Why this heat">
+              <strong>Why <span>· points combine, capped at 100</span></strong>
+              <div class="why-bar" aria-hidden="true">
+                <span id="why-pulse" class="why-pulse"></span
+                ><span id="why-breathing" class="why-breathing"></span
+                ><span id="why-expression" class="why-expression"></span
+                ><span id="why-text" class="why-text"></span>
+              </div>
+              <ul class="why-lines">
+                <li id="why-pulse-line" class="why-pulse"></li>
+                <li id="why-breathing-line" class="why-breathing"></li>
+                <li id="why-expression-line" class="why-expression"></li>
+                <li id="why-text-line" class="why-text"></li>
+              </ul>
+            </section>
             <p id="tip" class="tip"></p>
+            <button id="try-example" class="example-button">
+              Try a heated example
+            </button>
             <div class="compose-actions">
               <button id="send" class="primary">Send · open mail app ↗</button
               ><button id="copy">Copy</button

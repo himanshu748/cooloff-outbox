@@ -255,6 +255,75 @@ meter {
   color: #7c644b;
   font-size: 12px;
 }
+.heat-why {
+  --pulse-part: #a35b38;
+  --breathing-part: #376b59;
+  --expression-part: #895b82;
+  --text-part: #896322;
+  margin: 16px 0;
+  font-size: 12px;
+}
+.heat-why > strong {
+  font-weight: 600;
+}
+.heat-why > strong span {
+  font-weight: 400;
+  color: #686b60;
+}
+.why-bar {
+  display: flex;
+  overflow: hidden;
+  height: 9px;
+  border-radius: 6px;
+  background: #e8e8df;
+  margin: 9px 0 12px;
+}
+.why-bar .why-pulse {
+  background: var(--pulse-part);
+}
+.why-bar .why-breathing {
+  background: var(--breathing-part);
+}
+.why-bar .why-expression {
+  background: var(--expression-part);
+}
+.why-bar .why-text {
+  background: var(--text-part);
+}
+.why-lines {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.why-lines li {
+  border-left: 3px solid;
+  padding-left: 8px;
+  line-height: 1.5;
+}
+.why-lines .why-pulse {
+  border-color: var(--pulse-part);
+}
+.why-lines .why-breathing {
+  border-color: var(--breathing-part);
+}
+.why-lines .why-expression {
+  border-color: var(--expression-part);
+}
+.why-lines .why-text {
+  border-color: var(--text-part);
+}
+.example-button {
+  margin: 0 0 14px;
+  font-size: 12px;
+}
+.held-because {
+  border-left: 2px solid #a96c47;
+  padding-left: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
 .compose-actions {
   display: flex;
   gap: 10px;

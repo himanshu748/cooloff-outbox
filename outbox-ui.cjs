@@ -1,7 +1,7 @@
 const {
   Baseline,
   CoolingHold,
-  heatScore,
+  heatBreakdown,
   rewriteTip,
   confident,
   THRESHOLD,
@@ -20,12 +20,57 @@ function mountOutbox({ $, show, stop }) {
     subject: $('subject').value,
     body: $('body').value,
   });
-  const score = (message) =>
-    heatScore({
+  const breakdown = (message) =>
+    heatBreakdown({
       ...live,
+      camera,
       baseline: baseline.value,
       text: message.subject + '\n' + message.body,
     });
+  const score = (message) => breakdown(message).score;
+  const mayReplace = () =>
+    !Object.values(fields()).some((value) => value.trim()) ||
+    window.confirm('Replace the current composer draft?');
+  const number = (value) => Number(value.toFixed(1));
+  const textCues = (evidence) =>
+    [
+      evidence.capsContributed
+        ? evidence.capsRatio >= 0.95
+          ? 'ALL CAPS'
+          : 'mostly capitals'
+        : '',
+      evidence.repeatedPunctuation
+        ? `${evidence.repeatedPunctuation} repeated !/? groups`
+        : '',
+      ...evidence.hostileWords.map((word) => `“${word}”`),
+    ].filter(Boolean);
+  function evidenceLine(name, part) {
+    const e = part.evidence;
+    if (e.status !== 'available') return `${name} · ${e.status}`;
+    const points = `${number(part.points)} pts`;
+    if (name === 'Text')
+      return `Text · ${Math.round(e.capsRatio * 100)}% capitals, ${e.repeatedPunctuation} repeated !/? groups${e.hostileWords.length ? ', ' + e.hostileWords.map((word) => `“${word}”`).join(', ') : ''} · ${points}`;
+    if (name === 'Expression')
+      return `${e.label} face estimate ${Math.round(e.confidence * 100)}% · ${points}`;
+    const unit = name === 'Pulse' ? 'bpm' : 'breaths/min';
+    return `${name} ${number(e.value)} ${unit}, ${e.delta >= 0 ? '+' : ''}${number(e.delta)} vs your baseline ${number(e.baseline)} · ${points}`;
+  }
+  function heldBecause(analysis) {
+    const { pulse, breathing, expression, text } = analysis.parts;
+    const cues = [];
+    for (const [name, part, unit] of [
+      ['pulse', pulse, 'bpm'],
+      ['breathing', breathing, 'breaths/min'],
+    ])
+      if (part.points > 0)
+        cues.push(`${name} +${number(part.evidence.delta)} ${unit}`);
+    if (expression.points > 0)
+      cues.push(
+        `${expression.evidence.label} face estimate ${Math.round(expression.evidence.confidence * 100)}%`,
+      );
+    if (text.points > 0) cues.push(...textCues(text.evidence));
+    return `Held because: ${cues.join(', ')} · ${analysis.score}/100 at hold`;
+  }
   const safe = (text) =>
     String(text).replace(
       /[&<>"']/g,
@@ -105,13 +150,25 @@ function mountOutbox({ $, show, stop }) {
     notice('Composer cleared from memory. Cooling drafts are unchanged.');
     render();
   };
+  $('try-example').onclick = () => {
+    if (!mayReplace()) return;
+    $('to').value = 'teammate@example.com';
+    $('subject').value = 'THIS DEADLINE IS NOT OK!!!';
+    $('body').value =
+      'THIS HANDOFF IS USELESS!!! WHY DID YOU IGNORE THE PLAN?? THIS IS STUPID. WE NEED TO TALK ABOUT THE DEADLINE.';
+    notice(
+      'Staged workplace example — not a real message. Send or Copy to try the Cooling outbox.',
+    );
+    render();
+  };
   async function submit(copy) {
     const message = fields();
     if (!message.body.trim()) {
       notice('Write a message first.');
       return;
     }
-    if (score(message) < THRESHOLD) {
+    const analysis = breakdown(message);
+    if (analysis.score < THRESHOLD) {
       await deliver(message, copy);
       return;
     }
@@ -123,6 +180,7 @@ function mountOutbox({ $, show, stop }) {
       timerOnly: !camera || !baseline.value,
     });
     hold.id = nextId++;
+    hold.heldHeat = analysis;
     hold.copy = copy;
     holds.push(hold);
     $('body').value = '';
@@ -139,7 +197,20 @@ function mountOutbox({ $, show, stop }) {
   for (const id of ['subject', 'body']) $(id).oninput = render;
   function render() {
     const now = Date.now(),
-      heat = score(fields());
+      analysis = breakdown(fields()),
+      heat = analysis.score;
+    const total = Object.values(analysis.parts).reduce(
+      (sum, part) => sum + (part.points ?? 0),
+      0,
+    );
+    for (const [key, part] of Object.entries(analysis.parts)) {
+      const name = key[0].toUpperCase() + key.slice(1);
+      $('why-' + key).style.width =
+        `${((part.points ?? 0) / Math.max(100, total)) * 100}%`;
+      $('why-' + key).title =
+        `${name}: ${part.points === null ? part.evidence.status : number(part.points) + ' pts'}`;
+      $('why-' + key + '-line').textContent = evidenceLine(name, part);
+    }
     $('heat-word').textContent = label(heat);
     $('heat-number').textContent = `${heat} / 100`;
     $('heat-gauge').value = heat;
@@ -157,7 +228,7 @@ function mountOutbox({ $, show, stop }) {
       $('cards').innerHTML = holds
         .map(
           (h) =>
-            `<article data-hold="${h.id}" class="cooling-card"><div class="card-top"><span class="card-time"></span><span class="steam" aria-hidden="true">∿ ∿ ∿</span></div><h3>${safe(h.message.subject || '(No subject)')}</h3><small>To ${safe(h.message.to || '(not set)')}</small><p class="message-preview">${safe(h.message.body)}</p><p class="card-state"></p><div class="card-actions"><button data-id="${h.id}" data-action="deliver">${h.copy ? 'Copy message' : 'Open mail app'} ↗</button><button data-id="${h.id}" data-action="copy">Copy</button><button data-id="${h.id}" data-action="override">Send anyway</button><button data-id="${h.id}" data-action="edit">Edit</button><button data-id="${h.id}" data-action="delete">Delete</button></div></article>`,
+            `<article data-hold="${h.id}" class="cooling-card"><div class="card-top"><span class="card-time"></span><span class="steam" aria-hidden="true">∿ ∿ ∿</span></div><h3>${safe(h.message.subject || '(No subject)')}</h3><small>To ${safe(h.message.to || '(not set)')}</small><p class="message-preview">${safe(h.message.body)}</p><p class="held-because">${safe(heldBecause(h.heldHeat))}</p><p class="card-state"></p><div class="card-actions"><button data-id="${h.id}" data-action="deliver">${h.copy ? 'Copy message' : 'Open mail app'} ↗</button><button data-id="${h.id}" data-action="copy">Copy</button><button data-id="${h.id}" data-action="override">Send anyway</button><button data-id="${h.id}" data-action="edit">Edit</button><button data-id="${h.id}" data-action="delete">Delete</button></div></article>`,
         )
         .join('');
     }
@@ -205,11 +276,7 @@ function mountOutbox({ $, show, stop }) {
     const action = button.dataset.action;
     if (action === 'delete') holds = holds.filter((item) => item !== h);
     if (action === 'edit') {
-      if (
-        Object.values(fields()).some((value) => value.trim()) &&
-        !window.confirm('Replace the current composer draft?')
-      )
-        return;
+      if (!mayReplace()) return;
       for (const id of ['to', 'subject', 'body']) $(id).value = h.message[id];
       holds = holds.filter((item) => item !== h);
       $('body').focus();

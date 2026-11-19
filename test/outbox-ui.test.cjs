@@ -174,6 +174,49 @@ test('heated messages hold safely escaped text, unlock but never auto-send, then
   assert.equal(a.sent.length, 1);
   assert.equal(a.$('cards').innerHTML, '');
 });
+test('heated example fills all fields, confirms replacements, and captures a stable text-only hold reason', async () => {
+  let approved = false,
+    requests = 0;
+  const a = app({
+    confirm: () => {
+      requests++;
+      return approved;
+    },
+  });
+  a.$('try-example').onclick();
+  assert.equal(requests, 0);
+  assert.equal(a.$('to').value, 'teammate@example.com');
+  assert.match(a.$('feedback').textContent, /Staged workplace example/);
+  assert.equal(a.$('heat-number').textContent, '45 / 100');
+  assert.match(a.$('why-pulse-line').textContent, /camera off/);
+  assert.match(a.$('why-breathing-line').textContent, /camera off/);
+  assert.match(a.$('why-expression-line').textContent, /camera off/);
+  assert.equal(a.$('why-text').style.width, '45%');
+  assert.match(a.$('why-text-line').textContent, /45 pts/);
+  a.$('send').onclick();
+  const card = a.$('cards').querySelector('[data-hold="1"]');
+  const reason = card.querySelector('.held-because').textContent;
+  assert.match(reason, /Held because: ALL CAPS/);
+  assert.match(reason, /“useless”/);
+  assert.match(reason, /45\/100 at hold/);
+  a.$('body').value = 'A fresh calm request';
+  a.tick(10000);
+  assert.equal(card.querySelector('.held-because').textContent, reason);
+  assert.equal(a.$('cards').querySelector('[data-hold="1"]'), card);
+  for (const field of ['to', 'subject', 'body']) {
+    for (const id of ['to', 'subject', 'body']) a.$(id).value = '';
+    a.$(field).value = 'Unsaved';
+    a.$('try-example').onclick();
+    assert.equal(a.$(field).value, 'Unsaved');
+  }
+  assert.equal(requests, 3);
+  approved = true;
+  a.$('try-example').onclick();
+  assert.equal(a.$('to').value, 'teammate@example.com');
+  assert.match(a.$('body').value, /DEADLINE/);
+  assert.equal(a.sent.length, 0);
+  assert.equal(a.copied.length, 0);
+});
 test('ticks preserve card and button identity and preview scroll while updating controls', async () => {
   const a = app();
   await a.fill('YOU USELESS IDIOT!!! WHY??');
