@@ -5,6 +5,55 @@ before a heated email or DM becomes somebody else's problem. Not a sentiment
 oracle, medical tool, or automatic sender: it is a small piece of intentional
 friction, with an escape hatch.
 
+## Try it — no cloning needed
+
+Download your platform's build from [GitHub Releases](https://github.com/himanshu748/cooloff-outbox/releases)
+once a release is published: **Linux x64 AppImage**, **Windows x64 portable EXE**,
+or **macOS Apple Silicon (arm64) DMG**. Before a release, signed-in GitHub users
+can download and unzip artifacts from a successful **Downloadable builds** run
+under [Actions](https://github.com/himanshu748/cooloff-outbox/actions/workflows/release.yml).
+These builds are unsigned; download only from this repository.
+
+- **Linux:** make the AppImage executable (`chmod +x Cooloff-Outbox-*.AppImage`),
+  then open it. Ubuntu 22.04+ / glibc ≥2.35 and the host C++ runtime are required.
+  Install a working Vulkan GPU driver (for example `mesa-vulkan-drivers` on
+  Ubuntu); `vulkaninfo --summary` should show a device. The bundled Vulkan loader
+  is not a GPU driver. If FUSE is unavailable, run the AppImage with
+  `--appimage-extract-and-run`. Keep Chromium's sandbox enabled on your own machine.
+- **Windows:** run the portable EXE. SmartScreen may warn about an unknown
+  publisher: use **More info → Run anyway** only if you trust the download.
+  Install current Intel/AMD/NVIDIA graphics drivers with Vulkan support; the
+  loader is bundled, not the device driver.
+- **macOS:** open the DMG and drag the app to Applications. The app is unsigned
+  and not notarized: **right-click → Open**; if macOS still blocks it, review
+  **System Settings → Privacy & Security → Open Anyway** for this app only.
+  Allow camera access when prompted. The SDK bundles MoltenVK for Metal; no
+  separate Vulkan SDK installation is needed. Intel Macs are not supported.
+
+At consent, choose **Use without camera** to try the staged heated example and
+its 30-second timer-only pause: no webcam or key required. For live estimates,
+[register for a free Presage developer key](https://physiology.presagetech.com/auth/register),
+consent, then paste it into the in-app **API key** field. You do **not** need an
+environment variable. Camera mode requires the relevant metric authorizations
+and network access for the SDK's authentication/model downloads. Estimates are
+not medical measurements. Keys stay in the password field/SDK memory for this
+run; the app does not save them to disk or a keychain. Quitting clears them.
+
+### Build downloads yourself
+
+After `npm ci`, run `npm run package -- --linux --x64`,
+`npm run package -- --win --x64`, or `npm run package -- --mac --arm64` on the
+matching OS. Outputs go to `release/`. The full target-specific SDK native
+closure is copied outside ASAR under `resources/node_modules/@smartspectra/`,
+where the SDK's normal package resolver finds it; Koffi is unpacked too. No
+API key is embedded in the download. The SDK's bundled graphs/models are
+included; it may download additional models at runtime.
+
+Maintainers can dispatch **Downloadable builds** manually for all three
+artifacts (retained for 14 days), or push a `v*` tag to build and attach them to
+a GitHub Release. Packaging does not run on PRs. Windows/macOS builds must be
+tested on their target OS before claiming camera compatibility.
+
 ## Run
 
 Node 20+ (22 recommended), a desktop OS supported by SmartSpectra, and a Presage

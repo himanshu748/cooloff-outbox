@@ -149,6 +149,23 @@ function desk({ onConsent, onReadiness, onAcquire } = {}) {
   };
 }
 
+test('without an environment key, the in-app key field enables readiness and measurement', async () => {
+  const d = desk();
+  await d.element('consent-next').onclick();
+  assert.equal(d.element('api-key').value, '');
+  await d.run('prepare()');
+  await d.run('start()');
+  assert.equal(d.sessions.length, 0);
+  assert.match(d.element('key-hint').textContent, /Add your API key/);
+  d.element('api-key').value = 'manually-entered-test-key';
+  await d.run('prepare()');
+  await d.run('checkReadiness()');
+  await d.run('start()');
+  assert.equal(d.checks[0].apiKey, 'manually-entered-test-key');
+  assert.equal(d.sessions[0].options.apiKey, 'manually-entered-test-key');
+  assert.equal(d.sessions[0].started, true);
+});
+
 test('Prepare recovers from a disappeared selected camera and does not retry denied permission', async () => {
   const d = desk({
     onAcquire: (options) => {

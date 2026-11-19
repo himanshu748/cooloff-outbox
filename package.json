@@ -11,17 +11,100 @@
     "build": "esbuild renderer.js --bundle --platform=browser --outfile=dist/renderer.js",
     "start": "npm run build && electron .",
     "test": "node --test test/*.test.cjs",
-    "smoke": "node scripts/smoke.cjs"
+    "smoke": "node scripts/smoke.cjs",
+    "package": "npm run build && electron-builder --publish never"
   },
   "dependencies": {
     "@smartspectra/node-sdk": "3.5.0"
   },
   "devDependencies": {
     "electron": "^45.4.1",
+    "electron-builder": "26.18.0",
     "esbuild": "^0.25.0",
     "prettier": "^3.10.1"
   },
   "engines": {
     "node": ">=20"
+  },
+  "build": {
+    "appId": "com.himanshu748.cooloffoutbox",
+    "productName": "Cool-off Outbox",
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "Cooloff-Outbox-${version}-${os}-${arch}.${ext}",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/koffi/**/*"
+    ],
+    "npmRebuild": false,
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "readiness.cjs",
+      "recovery.cjs",
+      "handoff.cjs",
+      "index.html",
+      "styles.css",
+      "dist/renderer.js",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
+      "!node_modules/@smartspectra/node-sdk-*/**/*"
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office",
+      "extraResources": [
+        {
+          "from": "node_modules/@smartspectra/node-sdk-linux-${arch}/",
+          "to": "node_modules/@smartspectra/node-sdk-linux-${arch}/"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "node_modules/@smartspectra/node-sdk-win32-${arch}/",
+          "to": "node_modules/@smartspectra/node-sdk-win32-${arch}/"
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "NSCameraUsageDescription": "With your consent, Cool-off Outbox uses camera estimates of pulse, breathing and expressions to guide a pause before sending."
+      },
+      "extraResources": [
+        {
+          "from": "node_modules/@smartspectra/node-sdk-darwin-${arch}/",
+          "to": "node_modules/@smartspectra/node-sdk-darwin-${arch}/"
+        }
+      ]
+    }
   }
 }
