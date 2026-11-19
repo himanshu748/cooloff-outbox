@@ -1,6 +1,8 @@
 # Third-party notices
 
-Breathlines application code is MIT licensed. This does **not** relicense its dependencies.
+Cool-off Outbox application code is MIT licensed. This does **not** relicense its dependencies.
+Camera lifecycle, readiness, recovery, signal utilities, smoke and test plumbing
+are adapted from the same author's MIT Breathlines application.
 
 The Electron architecture is adapted from the documented wiring in Presage's
 [`electron-quickstart`](https://github.com/Presage-Security/SmartSpectra/tree/main/nodejs/samples/electron-quickstart):
@@ -19,6 +21,6 @@ Electron is MIT licensed and includes Chromium and other separately licensed
 components; see `node_modules/electron/dist/LICENSES.chromium.html`.
 esbuild is MIT licensed. SDK transitive dependencies retain their own licenses.
 
-No fonts, photos, or video assets are bundled with Breathlines. System Georgia,
+No fonts, photos, or video assets are bundled with Cool-off Outbox. System Georgia,
 Arial, and Courier New fall back to the platform's installed serif, sans-serif,
-and monospace fonts. The decorative breath curve is original SVG.
+and monospace fonts. The UI uses Unicode envelope and breath symbols.
