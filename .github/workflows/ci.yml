@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    outputs:
+      has-smoke-key: ${{ steps.smoke-key.outputs.available }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run format:check
+      - id: smoke-key
+        env:
+          SMARTSPECTRA_API_KEY: ${{ secrets.SMARTSPECTRA_API_KEY }}
+        run: |
+          if [ -n "$SMARTSPECTRA_API_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  smoke:
+    needs: unit
+    if: needs.unit.outputs.has-smoke-key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install video conversion tool
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg mesa-vulkan-drivers vulkan-tools
+      - name: Prepare noncommercial CC-licensed test excerpt
+        run: |
+          curl --fail --location --retry 3 --max-time 120 \
+            --output "$RUNNER_TEMP/face-source.mp4" \
+            'https://archive.org/download/DanGillmor_CenterforCitizenMediaJimmyWalesonCollectiveIntelligence/JimmyWales.mp4'
+          ffmpeg -hide_banner -loglevel error -ss 30 \
+            -i "$RUNNER_TEMP/face-source.mp4" -t 45 -an \
+            -c:v libx264 -crf 18 -pix_fmt yuv420p "$RUNNER_TEMP/face.mp4"
+      - name: Run real SmartSpectra pipeline
+        env:
+          SMARTSPECTRA_API_KEY: ${{ secrets.SMARTSPECTRA_API_KEY }}
+        run: npm run smoke -- "$RUNNER_TEMP/face.mp4"

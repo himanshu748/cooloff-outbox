@@ -1,0 +1,27 @@
+{
+  "name": "cooloff-outbox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A thoughtful pause between a heated draft and Send",
+  "main": "main.cjs",
+  "license": "MIT",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "esbuild renderer.js --bundle --platform=browser --outfile=dist/renderer.js",
+    "start": "npm run build && electron .",
+    "test": "node --test test/*.test.cjs",
+    "smoke": "node scripts/smoke.cjs"
+  },
+  "dependencies": {
+    "@smartspectra/node-sdk": "3.5.0"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "esbuild": "^0.25.0",
+    "prettier": "^3.10.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

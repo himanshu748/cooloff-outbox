@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'none'"
+    />
+    <title>Cool-off Outbox — a little space before Send</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="wordmark">Cool-off<span> Outbox ↗</span></a
+      ><span class="edition">A LITTLE SPACE BEFORE SEND</span
+      ><button id="stop">○ Stop camera</button>
+    </header>
+    <main id="consent" class="onboarding">
+      <section class="intro">
+        <span class="eyebrow">THE THOUGHTFUL SEND EXPERIMENT</span>
+        <h1>Write it now.<br /><em>Send it cooler.</em></h1>
+        <p class="lede">
+          Some messages deserve a little breathing room.<br />A private pause,
+          not a judgment.
+        </p>
+        <div class="envelope-art" aria-hidden="true">✉<span>∿ ∿ ∿</span></div>
+        <p>No accounts. No AI rewrites. Always your words.</p>
+      </section>
+      <section class="permission-card">
+        <span class="eyebrow">01 / YOUR CHOICE, FIRST</span>
+        <h2>Your camera. Your call.</h2>
+        <p>
+          Optional SmartSpectra camera estimates help you notice changes from
+          your own baseline. They cannot tell how you feel.
+        </p>
+        <div class="promise">
+          <b>01</b>
+          <div>
+            <strong>On-device processing</strong>
+            <p>
+              Camera only, never microphone. SDK authentication and model
+              downloads contact Presage; frames and vitals are not uploaded.
+            </p>
+          </div>
+        </div>
+        <div class="promise">
+          <b>02</b>
+          <div>
+            <strong>Messages live only in memory</strong>
+            <p>
+              No draft autosave or recording. Closing the app deletes messages
+              and vitals. An optional totals-only counter has a Delete button.
+            </p>
+          </div>
+        </div>
+        <div class="promise">
+          <b>03</b>
+          <div>
+            <strong>Never a medical judgment</strong>
+            <p>
+              Camera estimates, not medical. Heat is a fallible writing cue, not
+              emotion detection. Edit or delete anytime; override after 10
+              seconds.
+            </p>
+          </div>
+        </div>
+        <label class="toggle"
+          ><input type="checkbox" id="telemetry" /> Share SDK telemetry
+          (optional, off by default; device diagnostics, not
+          frames/vitals)</label
+        ><button id="consent-next" class="primary wide">
+          I consent — set up camera ↗</button
+        ><button id="no-camera" class="wide">
+          Use without camera · timer-only →
+        </button>
+        <p class="small">
+          Camera opens only after Prepare camera. You can stop it without losing
+          drafts.
+        </p>
+      </section>
+    </main>
+    <main id="key-screen" class="onboarding" hidden>
+      <section>
+        <h1>A key for<br /><em>local signals.</em></h1>
+        <p>
+          Prefer SMARTSPECTRA_API_KEY in your environment. Never show it on
+          camera.
+        </p>
+      </section>
+      <section class="permission-card">
+        <h2>Connect SmartSpectra</h2>
+        <label for="api-key">API key</label
+        ><input id="api-key" type="password" autocomplete="off" />
+        <p id="key-hint">Kept in memory only.</p>
+        <button id="open-desk" class="primary wide">Open the composer →</button
+        ><button id="back">← Back to consent</button>
+      </section>
+    </main>
+    <main id="desk" hidden>
+      <div class="desk-bar">
+        <div>
+          <span class="eyebrow">YOUR WORDS. A LITTLE MORE ROOM.</span>
+          <h1>The pause is yours.</h1>
+        </div>
+        <span id="session-tag" class="session-tag">CAMERA OFF</span>
+      </div>
+      <div class="workspace">
+        <section class="compose-column">
+          <section class="paper">
+            <div class="section-heading">
+              <span class="eyebrow">01 / COMPOSE</span><span>MEMORY ONLY</span>
+            </div>
+            <label for="to">To</label
+            ><input
+              id="to"
+              type="email"
+              maxlength="254"
+              placeholder="someone@example.com"
+              autocomplete="off"
+            /><label for="subject">Subject</label
+            ><input
+              id="subject"
+              maxlength="200"
+              placeholder="What needs saying?"
+              autocomplete="off"
+            /><label for="body">Message</label
+            ><textarea
+              id="body"
+              maxlength="8000"
+              rows="7"
+              placeholder="Say it in your own words. There is room to reconsider."
+            ></textarea>
+            <div class="heat-row">
+              <strong id="heat-word">calm</strong
+              ><meter
+                id="heat-gauge"
+                min="0"
+                max="100"
+                low="20"
+                high="40"
+                optimum="0"
+                value="0"
+                aria-label="Writing heat"
+              ></meter
+              ><span id="heat-number">0 / 100</span>
+            </div>
+            <p id="baseline" class="small">Timer-only · text cues, no camera</p>
+            <p id="tip" class="tip"></p>
+            <div class="compose-actions">
+              <button id="send" class="primary">Send · open mail app ↗</button
+              ><button id="copy">Copy</button
+              ><button id="clear-draft" class="text-button">Clear</button>
+            </div>
+            <p class="small">
+              Heated drafts (40+) pause in Cooling. Mail opens prefilled, never
+              sends automatically. Copy uses the same hold.
+            </p>
+          </section>
+          <section class="outbox">
+            <div class="section-heading">
+              <h2>Cooling outbox <span id="outbox-count">00</span></h2>
+              <span>SPACE, NOT SILENCE</span>
+            </div>
+            <div id="cooling-empty" class="empty">
+              Nothing waiting. A good place to begin.
+            </div>
+            <div id="cards"></div>
+          </section>
+          <section class="counter">
+            <label
+              ><input type="checkbox" id="save-counter" /> Save totals only on
+              this device</label
+            ><span id="counter-value">Counter off · no draft storage</span
+            ><button id="delete-counter">Delete counter</button>
+          </section>
+        </section>
+        <div class="right-column">
+          <section class="breath-guide">
+            <div id="breathing-ring" aria-hidden="true">∿</div>
+            <div>
+              <span class="eyebrow">LET THE WORDS WAIT</span>
+              <h2>A little breathing room.</h2>
+              <p id="ring-label">
+                An optional slow-exhale guide. Breathe comfortably.
+              </p>
+              <small
+                >Light guides 4 seconds in / 6 out; ring size follows the live
+                trace when available. No target to meet.</small
+              >
+            </div>
+          </section>
+          <aside class="instrument">
+            <div class="panel-heading">
+              <span class="eyebrow">LIVE, NOT A LABEL</span>
+              <h2>What SmartSpectra sees</h2>
+              <p>Camera estimates, not medical.</p>
+            </div>
+            <div class="preview">
+              <video id="preview" autoplay muted playsinline></video>
+              <div id="preview-empty">
+                <span>◉</span>
+                <p>A little light. A still moment.</p>
+                <small>Your camera is off.</small>
+              </div>
+              <span class="preview-label" id="preview-label"
+                >LOCAL PROCESSING / NO RECORDING</span
+              >
+            </div>
+            <div class="camera-actions">
+              <button id="start" class="primary">
+                Prepare camera <span>↗</span></button
+              ><button id="change-key" class="text-button">API key</button>
+            </div>
+            <section id="camera-setup" hidden aria-label="Camera preparation">
+              <h3>Can this desk hear your breath?</h3>
+              <p class="small">
+                Choose a camera that sees your face and upper chest. Preview is
+                not measurement.
+              </p>
+              <label for="camera-picker">Camera</label>
+              <select id="camera-picker" aria-label="Camera"></select>
+              <label for="rotation">Rotate camera</label>
+              <select id="rotation">
+                <option value="0">0° — upright</option>
+                <option value="90">90° clockwise</option>
+                <option value="180">180°</option>
+                <option value="270">90° counterclockwise</option>
+              </select>
+              <button id="check-readiness" class="subtle">
+                Check readiness
+              </button>
+              <p id="readiness-result" role="status">
+                Preview your framing, then check readiness.
+              </p>
+              <div id="measurement-options" hidden>
+                <button id="measure-full" class="primary">
+                  Measure with full signals
+                </button>
+                <button id="measure-breathing" class="subtle">
+                  Use breathing only
+                </button>
+              </div>
+            </section>
+            <p id="status" role="status" class="status">Ready when you are.</p>
+            <p id="validation" class="validation">
+              Sit comfortably in even light, with your face and upper chest in
+              view.
+            </p>
+            <p id="error" role="alert" hidden></p>
+            <button id="fallback" class="subtle" hidden>
+              Retry with breathing only
+            </button>
+            <div class="trace">
+              <div>
+                <span>CHEST / ABDOMEN</span
+                ><span id="source">LIVE BREATHING</span>
+              </div>
+              <canvas id="breath-wave" width="580" height="100"></canvas>
+              <div class="legend">— chest <span>— abdomen</span></div>
+            </div>
+            <div class="trace">
+              <div><span>PULSE TRACE</span><span>LOCAL SIGNAL</span></div>
+              <canvas id="pulse-wave" width="580" height="65"></canvas>
+            </div>
+            <dl id="values"></dl>
+          </aside>
+        </div>
+      </div>
+      <footer>
+        <span>LOCAL SIGNALS. HUMAN CHOICES.</span
+        ><span id="feedback" role="status">Nothing sends without you.</span>
+      </footer>
+    </main>
+    <script src="dist/renderer.js"></script>
+  </body>
+</html>
