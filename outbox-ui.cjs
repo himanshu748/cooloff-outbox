@@ -56,7 +56,7 @@ function mountOutbox({ $, show, stop }) {
     if (name === 'Text')
       return `Text · ${Math.round(e.capsRatio * 100)}% capitals, ${e.repeatedPunctuation} repeated !/? groups${e.hostileWords.length ? ', ' + e.hostileWords.map((word) => `“${word}”`).join(', ') : ''} · ${points}`;
     if (name === 'Expression')
-      return `${e.label} face estimate ${Math.round(e.confidence * 100)}% · ${points}`;
+      return `Expression · ${e.label} ${Math.round(e.confidence * 100)}%${e.heatCue ? '' : ' · not a heat cue'} · ${points}`;
     const unit = name === 'Pulse' ? 'bpm' : 'breaths/min';
     return `${name} ${number(e.value)} ${unit}, ${e.delta >= 0 ? '+' : ''}${number(e.delta)} vs your baseline ${number(e.baseline)} · ${points}`;
   }
@@ -326,7 +326,17 @@ function mountOutbox({ $, show, stop }) {
       camera = active;
       const normalize = (s) =>
         s ? { value: s.value, confidence: s.confidence / 100 } : null;
-      const names = ['', 'angry', 'contempt', 'disgust'];
+      const names = [
+        'unspecified',
+        'angry',
+        'contempt',
+        'disgust',
+        'fear',
+        'happy',
+        'neutral',
+        'sad',
+        'surprise',
+      ];
       live = {
         pulse: normalize(metrics.cardio?.pulseRate?.at(-1)),
         breathing: normalize(metrics.breathing?.rate?.at(-1)),

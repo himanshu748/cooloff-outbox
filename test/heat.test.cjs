@@ -41,6 +41,26 @@ test('breakdown reports scored raw evidence and dominant confident expression', 
     'idiot',
   ]);
 });
+test('dominant confident non-heat expressions are available but contribute zero', () => {
+  for (const name of ['surprise', 'happy', 'neutral', 'sad', 'fear']) {
+    const expressions = [
+      { name, value: 0.96, confidence: 0.96 },
+      { name: 'angry', value: 0.6, confidence: 0.6 },
+      { name: 'disgust', value: 0.99, confidence: 0.1 },
+    ];
+    const result = heatBreakdown({ expressions });
+    assert.equal(result.parts.expression.evidence.status, 'available');
+    assert.equal(result.parts.expression.evidence.label, name);
+    assert.equal(result.parts.expression.evidence.confidence, 0.96);
+    assert.equal(result.parts.expression.evidence.heatCue, false);
+    assert.equal(result.parts.expression.points, 0);
+    assert.equal(result.score, 0);
+    const off = heatBreakdown({ expressions, camera: false });
+    assert.equal(off.parts.expression.evidence.status, 'camera off');
+    assert.equal(off.parts.expression.evidence.label, null);
+    assert.equal(off.parts.expression.points, null);
+  }
+});
 test('missing, low-confidence and camera-off evidence is unavailable, not a measured zero', () => {
   for (const input of [
     {},

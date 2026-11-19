@@ -350,6 +350,57 @@ test('receipt trace and summary update on the same card and stop after timer unl
   assert.equal(trace.attributes.points, frozen);
   assert.equal(a.sent.length, 0);
 });
+test('confident non-heat expressions appear in Why but not frozen hold reasons', () => {
+  for (const [type, name] of [
+    [8, 'surprise'],
+    [5, 'happy'],
+    [6, 'neutral'],
+  ]) {
+    const a = app();
+    a.ui.samples(
+      { face: { expression: [{ scores: [{ type, confidence: 96 }] }] } },
+      true,
+    );
+    a.tick(1000);
+    assert.equal(
+      a.$('why-expression-line').textContent,
+      `Expression · ${name} 96% · not a heat cue · 0 pts`,
+    );
+    a.$('try-example').onclick();
+    a.$('send').onclick();
+    const reason = a
+      .$('cards')
+      .querySelector('[data-hold="1"]')
+      .querySelector('.held-because').textContent;
+    assert.match(reason, /Held because: ALL CAPS/);
+    assert.doesNotMatch(reason, /surprise|happy|neutral|face estimate/);
+    a.ui.samples(
+      { face: { expression: [{ scores: [{ type: 1, confidence: 90 }] }] } },
+      true,
+    );
+    a.tick(2000);
+    assert.match(
+      a.$('why-expression-line').textContent,
+      /angry 90% · 22.5 pts/,
+    );
+    assert.equal(
+      a
+        .$('cards')
+        .querySelector('[data-hold="1"]')
+        .querySelector('.held-because').textContent,
+      reason,
+    );
+    a.ui.samples(
+      { face: { expression: [{ scores: [{ type, confidence: 49 }] }] } },
+      true,
+    );
+    a.tick(3000);
+    assert.equal(
+      a.$('why-expression-line').textContent,
+      'Expression · no confident data',
+    );
+  }
+});
 test('SDK percentages, expression enum and 20-second personal baseline reach the composer', () => {
   const a = app();
   for (let t = 0; t <= 20000; t += 1000) {

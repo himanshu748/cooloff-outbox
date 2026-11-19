@@ -72,20 +72,28 @@ function heatBreakdown({
       },
     };
   };
-  const hostile = expressions.filter(
-    (s) => /^(angry|anger|contempt|disgust)$/i.test(s.name) && confident(s),
-  );
-  const dominant = hostile.reduce(
-    (best, s) => (!best || clamp(s.value) > clamp(best.value) ? s : best),
-    null,
+  const dominant = expressions
+    .filter(confident)
+    .reduce(
+      (best, s) => (!best || clamp(s.value) > clamp(best.value) ? s : best),
+      null,
+    );
+  const heatCue = Boolean(
+    dominant && /^(angry|anger|contempt|disgust)$/i.test(dominant.name),
   );
   const parts = {
     pulse: vital(pulse, baseline?.pulse, 30, 30),
     breathing: vital(breathing, baseline?.breathing, 25, 12),
     expression: {
-      points: unavailable || !dominant ? null : 25 * clamp(dominant.value),
+      points:
+        unavailable || !dominant
+          ? null
+          : heatCue
+            ? 25 * clamp(dominant.value)
+            : 0,
       evidence: {
         status: unavailable || (dominant ? 'available' : 'no confident data'),
+        heatCue: !unavailable && heatCue,
         label: unavailable
           ? null
           : dominant?.name === 'anger'
