@@ -888,11 +888,12 @@ h2 {
     display: none;
   }
   .hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding-block: 40px 45px;
     gap: 15px;
   }
   .hero-copy {
+    min-width: 0;
     max-width: 520px;
   }
   h1 {
@@ -981,7 +982,7 @@ h2 {
     letter-spacing: 0.8px;
   }
   h1 {
-    font-size: 66px;
+    font-size: clamp(50px, 16vw, 66px);
     letter-spacing: -3.5px;
     margin-block: 25px;
   }
@@ -1000,9 +1001,10 @@ h2 {
     font-size: 9px;
   }
   .hero-art {
-    transform: scale(0.69);
+    max-width: 100%;
+    transform: scale(0.6);
     transform-origin: top left;
-    margin: 20px 0 -120px calc(50% - 177px);
+    margin: 20px 0 -145px calc(50% - 153px);
   }
   .trust-strip {
     gap: 17px 10px;

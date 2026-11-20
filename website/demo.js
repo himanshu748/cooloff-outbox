@@ -36,7 +36,7 @@ tryButton.addEventListener('click', () => {
   countdown.setAttribute('aria-hidden', 'true');
   interval = setInterval(() => {
     seconds--;
-    countdown.textContent = `${seconds} seconds · timer-only demo`;
+    countdown.textContent = `${seconds} ${seconds === 1 ? 'second' : 'seconds'} · timer-only demo`;
     if (seconds <= 0) {
       clearInterval(interval);
       outbox.classList.replace('is-cooling', 'is-ready');

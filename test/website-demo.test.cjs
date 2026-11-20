@@ -61,7 +61,7 @@ test('website demo completes a hold without sending and can be replayed', () => 
   assert.equal(a.node('reset-demo').hidden, false);
   assert.equal(a.node('demo-outbox').classList.contains('is-cooling'), true);
   for (let i = 0; i < 29; i++) a.tick();
-  assert.equal(a.node('countdown').textContent, '1 seconds · timer-only demo');
+  assert.equal(a.node('countdown').textContent, '1 second · timer-only demo');
   assert.equal(a.node('try-demo').disabled, true);
   a.tick();
   assert.equal(a.intervals.size, 0);
