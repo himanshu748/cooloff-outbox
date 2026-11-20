@@ -5,6 +5,23 @@ before a heated email or DM becomes somebody else's problem. Not a sentiment
 oracle, medical tool, or automatic sender: it is a small piece of intentional
 friction, with an escape hatch.
 
+## Product website
+
+The responsive landing page lives in [`website/`](website/index.html). It is a
+dependency-free static site: publish that directory with any static host. It
+includes release downloads, privacy details, an FAQ, and a clearly labeled
+interactive timer-only preview that never accesses the camera or sends messages.
+No hosting or public deployment is configured by this change.
+
+To preview locally from the repository root (Python 3):
+
+```sh
+python3 -m http.server 4173 --directory website
+```
+
+Open `http://localhost:4173`. No API key, build step, or external fonts are needed.
+The desktop app is still launched separately with `npm start`.
+
 ## Try it — no cloning needed
 
 Download your platform's build from [GitHub Releases](https://github.com/himanshu748/cooloff-outbox/releases)

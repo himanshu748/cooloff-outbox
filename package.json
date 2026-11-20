@@ -46,6 +46,7 @@
       "handoff.cjs",
       "index.html",
       "styles.css",
+      "assets/**/*",
       "dist/renderer.js",
       "LICENSE",
       "THIRD_PARTY_NOTICES.md",

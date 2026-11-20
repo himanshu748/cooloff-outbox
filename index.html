@@ -12,24 +12,37 @@
   </head>
   <body>
     <header>
-      <a class="wordmark">Cool-off<span> Outbox ↗</span></a
-      ><span class="edition">A LITTLE SPACE BEFORE SEND</span
-      ><button id="stop">○ Stop camera</button>
+      <div class="wordmark">
+        <span class="brand-icon" aria-hidden="true">Ⅱ</span> Cool-off
+        <span>Outbox</span>
+      </div>
+      <span class="edition">A LITTLE SPACE BEFORE SEND</span>
+      <button id="stop" class="camera-stop">○ Stop camera</button>
     </header>
     <main id="consent" class="onboarding">
       <section class="intro">
-        <span class="eyebrow">THE THOUGHTFUL SEND EXPERIMENT</span>
-        <h1>Write it now.<br /><em>Send it cooler.</em></h1>
+        <span class="intro-badge"
+          ><span aria-hidden="true">✳</span> A SMALL PAUSE. A HUMAN
+          CHOICE.</span
+        >
+        <h1>Your words.<br />A little more<br /><em>breathing room.</em></h1>
         <p class="lede">
-          Some messages deserve a little breathing room.<br />A private pause,
-          not a judgment.
+          For the messages you mean. And the ones you might rethink. A private
+          space between the first draft and Send.
         </p>
-        <div class="envelope-art" aria-hidden="true">✉<span>∿ ∿ ∿</span></div>
-        <p>No accounts. No AI rewrites. Always your words.</p>
+        <div class="envelope-art" aria-hidden="true">
+          <img src="assets/pause-letter.svg" alt="" /><span class="art-note"
+            >A moment can change a message.</span
+          >
+        </div>
+        <p class="intro-footnote">
+          <span aria-hidden="true">↳</span> No accounts. No AI rewrites. Always
+          your words.
+        </p>
       </section>
       <section class="permission-card">
-        <span class="eyebrow">01 / YOUR CHOICE, FIRST</span>
-        <h2>Your camera. Your call.</h2>
+        <span class="eyebrow">BEFORE WE BEGIN</span>
+        <h2>Your space.<br />Your choice.</h2>
         <p>
           Optional SmartSpectra camera estimates help you notice changes from
           your own baseline. They cannot tell how you feel.
@@ -82,6 +95,7 @@
     </main>
     <main id="key-screen" class="onboarding" hidden>
       <section>
+        <span class="intro-badge">OPTIONAL CAMERA SETUP</span>
         <h1>A key for<br /><em>local signals.</em></h1>
         <p>
           Prefer SMARTSPECTRA_API_KEY in your environment. Never show it on
@@ -100,8 +114,8 @@
     <main id="desk" hidden>
       <div class="desk-bar">
         <div>
-          <span class="eyebrow">YOUR WORDS. A LITTLE MORE ROOM.</span>
-          <h1>The pause is yours.</h1>
+          <span class="eyebrow">A CLEARER HEAD STARTS HERE</span>
+          <h1>Make room for <em>your words.</em></h1>
         </div>
         <span id="session-tag" class="session-tag">CAMERA OFF</span>
       </div>
@@ -109,7 +123,8 @@
         <section class="compose-column">
           <section class="paper">
             <div class="section-heading">
-              <span class="eyebrow">01 / COMPOSE</span><span>MEMORY ONLY</span>
+              <span class="eyebrow">01 / A FRESH DRAFT</span
+              ><span>◌ MEMORY ONLY</span>
             </div>
             <label for="to">To</label
             ><input
@@ -128,7 +143,7 @@
             ><textarea
               id="body"
               maxlength="8000"
-              rows="7"
+              rows="6"
               placeholder="Say it in your own words. There is room to reconsider."
             ></textarea>
             <div class="heat-row">
@@ -146,8 +161,11 @@
               ><span id="heat-number">0 / 100</span>
             </div>
             <p id="baseline" class="small">Timer-only · text cues, no camera</p>
-            <section class="heat-why" aria-label="Why this heat">
-              <strong>Why <span>· points combine, capped at 100</span></strong>
+            <details class="heat-why">
+              <summary>
+                Behind the writing cue <span>· not a judgment</span>
+              </summary>
+              <p class="small">Points combine, capped at 100.</p>
               <div class="why-bar" aria-hidden="true">
                 <span id="why-pulse" class="why-pulse"></span
                 ><span id="why-breathing" class="why-breathing"></span
@@ -160,7 +178,7 @@
                 <li id="why-expression-line" class="why-expression"></li>
                 <li id="why-text-line" class="why-text"></li>
               </ul>
-            </section>
+            </details>
             <p id="tip" class="tip"></p>
             <button id="try-example" class="example-button">
               Try a heated example
@@ -181,7 +199,9 @@
               <span>SPACE, NOT SILENCE</span>
             </div>
             <div id="cooling-empty" class="empty">
-              Nothing waiting. A good place to begin.
+              <span class="empty-icon" aria-hidden="true">↗</span
+              ><strong>A little space for second thoughts.</strong
+              ><span>Heated drafts wait here. Nothing sends without you.</span>
             </div>
             <div id="cards"></div>
           </section>
@@ -211,7 +231,7 @@
           <aside class="instrument">
             <div class="panel-heading">
               <span class="eyebrow">LIVE, NOT A LABEL</span>
-              <h2>What SmartSpectra sees</h2>
+              <h2>Your optional signals</h2>
               <p>Camera estimates, not medical.</p>
             </div>
             <div class="preview">
@@ -231,7 +251,7 @@
               ><button id="change-key" class="text-button">API key</button>
             </div>
             <section id="camera-setup" hidden aria-label="Camera preparation">
-              <h3>Can this desk hear your breath?</h3>
+              <h3>Find your frame.</h3>
               <p class="small">
                 Choose a camera that sees your face and upper chest. Preview is
                 not measurement.
